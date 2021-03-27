@@ -1,0 +1,53 @@
+name: Pull Request
+
+on: [push, pull_request]
+
+env:
+  flutter_version: "2.0.3"
+  java_version: "12.x"
+
+jobs:
+
+  setup:
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        include:
+          - os: ubuntu-latest
+            flutter_path: /opt/hostedtoolcache/flutter
+      fail-fast: false
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Set up our JDK environment
+        uses: actions/setup-java@v1
+        with:
+          java-version: ${{ env.java_version }}
+
+      - name: Cache Flutter
+        uses: actions/cache@v1
+        with:
+          path: ${{ matrix.flutter_path }}
+          key: ${{ runner.os }}-flutter
+
+      - name: Setup Flutter env
+        uses: subosito/flutter-action@v1
+        with:
+          flutter-version: ${{ env.flutter_version }}
+
+      - name: Install Flutter dependencies
+        run: flutter pub get
+
+      - name: Analyze
+        uses: HansChua/flutter-docker@master
+        with:
+          github_token: ${{ secrets.github_token }}
+          reporter: github-pr-check
+
+      - name: Flutter Test
+        run: flutter test
