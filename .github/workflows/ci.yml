@@ -1,0 +1,65 @@
+name: Pull Request
+
+on: [pull_request]
+
+env:
+  flutter_version: "2.0.3"
+  java_version: "12.x"
+
+jobs:
+
+  setup:
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        dart_sdk: [stable]
+        python_version: [ '3.x' ]
+        include:
+          - os: ubuntu-latest
+            flutter_path: /opt/hostedtoolcache/flutter
+      fail-fast: false
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Setup our JDK environment
+        uses: actions/setup-java@v1
+        with:
+          java-version: ${{ env.java_version }}
+
+      - name: Setup Dart SDK
+        uses: dart-lang/setup-dart@v1
+        with:
+          sdk: ${{ matrix.dart_sdk }}
+
+      - name: Setup python
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python_version }}
+          architecture: x64
+
+      - name: Cache Flutter
+        uses: actions/cache@v1
+        with:
+          path: ${{ matrix.flutter_path }}
+          key: ${{ runner.os }}-flutter
+
+      - name: Setup Flutter env
+        uses: subosito/flutter-action@v1
+        with:
+          flutter-version: ${{ env.flutter_version }}
+
+      - name: Install Flutter dependencies
+        run: flutter pub get
+
+      - name: Run dartanalyzer reviewdog
+        uses: HansChua/dartanalyzer-reviewdog-action@main
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Flutter Test
+        run: flutter test
